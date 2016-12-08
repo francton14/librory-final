@@ -6,13 +6,29 @@
 package com.tcl.librory.gui;
 
 import com.tcl.librory.database.dao.BookDao;
+import com.tcl.librory.database.dao.LibrarianDao;
 import com.tcl.librory.database.dao.impl.BookDaoImpl;
+import com.tcl.librory.database.dao.impl.LibrarianDaoImpl;
+import com.tcl.librory.models.Book;
+import com.tcl.librory.models.Genre;
+import com.tcl.librory.models.Librarian;
 import com.tcl.librory.sessionmanagement.Session;
+import com.tcl.librory.utils.DateUtils;
 import java.awt.CardLayout;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JComboBox;
+import javax.swing.JFormattedTextField;
+import javax.swing.JOptionPane;
+import javax.swing.JTextField;
+import javax.swing.text.DateFormatter;
+import javax.swing.text.DefaultFormatterFactory;
 
 /**
  *
@@ -22,6 +38,7 @@ public class Librory extends javax.swing.JFrame {
 
     private Session session;
     private CardLayout cardLayout;
+    private LibrarianDao librarianDao;
     private BookDao bookDao;
     /**
      * Creates new form Librarian
@@ -32,6 +49,7 @@ public class Librory extends javax.swing.JFrame {
 	try {
 	    session = new Session();
 	    getAuthenticated();
+            librarianDao = new LibrarianDaoImpl();
 	    bookDao = new BookDaoImpl();
 	} catch (IOException | InstantiationException | SQLException | IllegalAccessException ex) {
 	    Logger.getLogger(Librory.class.getName()).log(Level.SEVERE, null, ex);
@@ -101,9 +119,11 @@ public class Librory extends javax.swing.JFrame {
         menuAccount = new javax.swing.JMenu();
         mnuLibProfile = new javax.swing.JMenuItem();
         mnuLibLogout = new javax.swing.JMenuItem();
+        jSeparator2 = new javax.swing.JPopupMenu.Separator();
         mnuLibExit = new javax.swing.JMenuItem();
         menuBooks = new javax.swing.JMenu();
         mnuLibAdd = new javax.swing.JMenuItem();
+        jSeparator1 = new javax.swing.JPopupMenu.Separator();
         mnuLibBorrowed = new javax.swing.JMenuItem();
 
         jMenu1.setText("Librory");
@@ -232,6 +252,7 @@ public class Librory extends javax.swing.JFrame {
         mnuLibLogout.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_L, java.awt.event.InputEvent.ALT_MASK));
         mnuLibLogout.setText("Logout");
         menuAccount.add(mnuLibLogout);
+        menuAccount.add(jSeparator2);
 
         mnuLibExit.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F4, java.awt.event.InputEvent.ALT_MASK));
         mnuLibExit.setText("Exit");
@@ -248,6 +269,7 @@ public class Librory extends javax.swing.JFrame {
             }
         });
         menuBooks.add(mnuLibAdd);
+        menuBooks.add(jSeparator1);
 
         mnuLibBorrowed.setText("Borrowed Books");
         menuBooks.add(mnuLibBorrowed);
@@ -261,17 +283,56 @@ public class Librory extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnLibLendActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLibLendActionPerformed
-	try {
-	    new BookAdd(bookDao.show(Long.valueOf(tblLibBooks.getModel().getValueAt(tblLibBooks.getSelectedRow(), 0).toString())));
-	} catch (SQLException ex) {
-	    Logger.getLogger(Librory.class.getName()).log(Level.SEVERE, null, ex);
-	}
+	
     }//GEN-LAST:event_btnLibLendActionPerformed
 
     private void mnuLibAddActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mnuLibAddActionPerformed
-	new BookAdd(null).setVisible(true);
+	JTextField txtControlNumber = new JTextField();
+        JTextField txtIsbn = new JTextField();
+        JTextField txtTitle = new JTextField();
+        JTextField txtAuthor = new JTextField();
+        JTextField txtPublisher = new JTextField();
+        JFormattedTextField txtDatePublished = new JFormattedTextField(new SimpleDateFormat("MM-dd-yyyy"));
+        JComboBox<Genre> cbxGenre = new JComboBox<>(Genre.values());
+        Object[] fields = {"Control Number", txtControlNumber, 
+            "ISBN", txtIsbn, "Title", txtTitle, "Author", txtAuthor, 
+            "Publisher", txtPublisher, "Date Published", txtDatePublished, 
+            "Genre", cbxGenre};
+        if (JOptionPane.showConfirmDialog(this, fields, "Librory - Add New Book", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+            try {
+                String controlNumber = txtControlNumber.getText().trim();
+                String isbn = txtIsbn.getText().trim();
+                String title = txtTitle.getText().trim();
+                String author = txtAuthor.getText().trim();
+                String publisher = txtPublisher.getText().trim();
+                Date datePublished = DateUtils.toDate(txtDatePublished.getText());
+                Genre genre = (Genre) cbxGenre.getSelectedItem();
+                Book book = new Book();
+                book.setControlNumber(Long.valueOf(controlNumber));
+                book.setIsbn(isbn);
+                book.setTitle(title);
+                book.setAuthor(author);
+                book.setPublisher(publisher);
+                book.setPublishedDate(datePublished);
+                book.setGenre(genre);
+                book.setLibrarian(authenticated());
+                bookDao.insert(book);
+            } catch (ParseException | SQLException ex) {
+                Logger.getLogger(Librory.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+        }        
     }//GEN-LAST:event_mnuLibAddActionPerformed
 
+    private Librarian authenticated() {
+        try {
+            return librarianDao.show(session.getUserID());
+        } catch (SQLException ex) {
+            Logger.getLogger(Librory.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }    
+    
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnLibDelete;
     private javax.swing.JButton btnLibLend;
@@ -290,6 +351,8 @@ public class Librory extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel5;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JPopupMenu.Separator jSeparator1;
+    private javax.swing.JPopupMenu.Separator jSeparator2;
     private javax.swing.JMenuBar librarianMenu;
     private javax.swing.JMenu menuAccount;
     private javax.swing.JMenu menuBooks;
