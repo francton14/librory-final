@@ -1,0 +1,10 @@
+.idea/
+
+target/
+
+*.iml
+
+bin/
+.project
+/nbproject/private/
+/build/
